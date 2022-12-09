@@ -1,0 +1,238 @@
+---
+title: "Quarto demo document"
+author: "Kathleen McLean"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+format: 
+  html:
+    toc: true
+    code-fold: true
+    embed-resources: true
+execute: 
+  warning: false
+  message: false
+editor: source
+bibliography: references.bib
+csl: apa-numeric-superscript-brackets.csl
+---
+
+## Introduction
+
+This document is a demonstration of Quarto. Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see [the Quarto guide](https://quarto.org/docs/guide/). Quarto is the next-generation of R Markdown, and includes new features and capabilities while at the same being able to render most existing .Rmd files without modification. In both Quarto and R Markdown documents, text content is written in [markdown](https://www.markdownguide.org/), a lightweight markup language that you can use to add formatting elements to plaintext text documents.
+
+Some of the differences between Quarto and R Markdown are:
+
+1.  Quarto supports multiple coding languages (R, Python, Julia, and Observable), whereas R Markdown is only for R.
+2.  Quarto can be installed as a stand-alone computer program, whereas `rmarkdown` is an R package (used with other related R packages). The Quarto program now comes bundled with RStudio, so does not require a separate installation for use with R.
+3.  Quarto documents have the extension .qmd, whereas R Markdown documents have the extension .Rmd.
+4.  There are some changes in the YAML header, because the YAML header has been standardized across formats in Quarto. For example, instead of output: (R Markdown), use format: (Quarto).
+5.  In Quarto, code chunk options are moved to within the code chunk using #\| (hash-pipe) for each line.
+
+For more information, see the [FAQ for R Markdown users](https://quarto.org/docs/faq/rmarkdown.html).
+
+This document is **not** designed to demonstrate all of the steps of a *comprehensive* data analysis.
+
+## Example data set
+
+In order to demonstrate the features of Quarto, we will use an example data set from the R package `mlbench`. This data set contains observations of health and diabetes status in Pima Indians. The Pima are a group of Native Americans living in an area consisting of what is now central and southern Arizona, and northwestern Mexico. This data set is originally from the National Institute of Diabetes and Digestive and Kidney Diseases, and is made available by the UCI Machine Learning Repository [@dua2019]. The objective of the data set is to diagnostically predict whether or not a patient has diabetes, based on certain diagnostic measurements included in the data set. Several constraints were placed on the selection of these instances from a larger database. In particular, all patients here are females at least 21 years old of Pima Indian heritage.
+
+```{r}
+#| label: load
+
+# Load packages
+
+library(mlbench)
+library(tidyverse)
+library(gt)
+library(gtsummary)
+library(flextable)
+
+# Load the data and give it a shorter object name
+data("PimaIndiansDiabetes2")
+diabetes_in <- PimaIndiansDiabetes2
+rm(PimaIndiansDiabetes2)
+```
+
+## Basic markdown table example
+
+The example data set contains the variables described in @tbl-vardescriptions below. This markdown table was created using the Table -\> Insert Table... button on the [RStudio visual editor](https://posit.co/blog/exploring-rstudio-visual-markdown-editor/) toolbar. This is a decent option for smaller tables that do not contain lots of embedded code, but table formatting options are limited.
+
+| Variable name | Description                                                                                |
+|--------------------------|----------------------------------------------|
+| diabetes      | patient positive or negative for diabetes                                                  |
+| pregnant      | number of pregnancies                                                                      |
+| glucose       | plasma glucose concentration                                                               |
+| pressure      | diastolic blood pressure (mm Hg)                                                           |
+| triceps       | triceps skin fold thickness (mm)                                                           |
+| insulin       | 2-hour serum insulin ($\mu$U/mL)                                                           |
+| mass          | body mass index                                                                            |
+| pedigree      | diabetes pedigree function (a score of the likelihood of diabetes based on family history) |
+| age           | patient age in years                                                                       |
+
+: Variable descriptions {#tbl-vardescriptions}
+
+## Example data set analysis
+
+```{r}
+#| label: clean
+
+diabetes <- diabetes_in %>%
+  # remove subjects with missing values
+  filter(complete.cases(.)) %>%
+  # change outcome column to numeric values
+  mutate(diabetes = case_when(
+    diabetes == "pos" ~ 1,
+    diabetes == "neg" ~ 0
+  ))
+
+# define summary objects for later use
+number_of_predictors <- ncol(diabetes) - 1
+
+```
+
+For this example analysis, instead of investigating missing values in each of the variables and making an informed decision about how to handle the missing values, we removed subjects with missing values for any of the variables.
+
+```{r}
+#| label: analysis
+
+# fit a logistic regression model using all of the variables
+# using . in the model formula is a short-hand for including all variables other 
+# than the outcome
+
+model_fit <- glm(diabetes ~ .,
+                 data = diabetes,
+                 family = binomial(link = "logit"))
+
+```
+
+Similarly, instead of going through a process of variable selection to determine the set of diagnostic measurements that best predicts whether or not a patient has diabetes, we fit a logistic regression model to predict the outcome using all `r number_of_predictors` available variables in the data set. The equation of the model is:
+
+$$
+ln(\frac{Y}{1 - Y}) = \beta_0 + \beta_1X_1 + \beta_2X_2 + ... + \beta_8X_8
+$$
+
+where $Y$ is the outcome (diabetes status), and $X_1$ through $X_8$ are the set of covariates (diagnostic measurements).
+
+Use LaTeX syntax for mathematical operators, Greek letters, etc. Here are some resources for using math expressions in Quarto and R Markdown: 
+
+-   [Math expressions in R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/markdown-syntax.html#math-expressions)
+-   [List of LaTeX mathematical symbols](https://oeis.org/wiki/List_of_LaTeX_mathematical_symbols)
+-   [LaTeX:Symbols](https://artofproblemsolving.com/wiki/index.php/LaTeX:Symbols)
+-   [Mathematics in R Markdown](https://rpruim.github.io/s341/S19/from-class/MathinRmd.html)
+
+## Results
+
+There are `r nrow(diabetes_in)` patients included in the original data set. After removing patients with any missing diagnostic measurements, there are `r nrow(diabetes)` patients included in the analysis. Of these patients, `r diabetes %>% filter(diabetes == 1) %>% nrow()` (`r sprintf("%0.1f", (diabetes %>% filter(diabetes == 1) %>% nrow())/(diabetes %>% nrow())*100)`%) were positive for diabetes, and `r diabetes %>% filter(diabetes == 0) %>% nrow()` (`r sprintf("%0.1f", (diabetes %>% filter(diabetes == 0) %>% nrow())/(diabetes %>% nrow())*100)`%) were negative for diabetes. Of all of the diagnostic measurements, the shape of the distribution of plasma glucose concentrations is the most different for patients who are positive for diabetes compared with patients who are negative (@fig-vardistributions). See @tbl-varsummarystats for summary statistics of each variable, and @tbl-regoutput for a summary of the logistic regression model output.
+
+### Example figure
+
+-   For figures produced by executable code chunks, include a label with the prefix `fig-` and a figure caption to make them cross-referenceable and to add automatic figure numbering. For figures added by referencing an external file, add a figure caption and a label in braces with the prefix `#fig-`. See [here](https://quarto.org/docs/authoring/cross-references.html).
+
+```{r}
+#| label: fig-vardistributions
+#| fig-cap: Variable distributions by diabetes status
+
+diabetes %>%
+  pivot_longer(cols = -diabetes,
+               names_to = "measure", values_to = "value") %>%
+  mutate(diabetes = factor(diabetes,
+                           levels = 0:1,
+                           labels = c("Negative", "Positive"))) %>%
+  ggplot(data = .,
+         aes(x = value, colour = diabetes)) +
+  geom_freqpoly() + 
+  scale_color_discrete("Diabetes status") +
+  facet_wrap(~ measure, ncol = 4, scales = "free_x") + 
+  labs(x = "Value",
+       y = "Count") + 
+  theme_minimal()
+```
+
+### Example table 1
+
+-   For tables produced by executable code chunks, include a label with the prefix `tbl-` and a table caption to make them cross-referenceable and to add automatic table numbering. For markdown tables, add a table caption including a label in braces at the end of the caption with the prefix `#tbl-`. See [here](https://quarto.org/docs/authoring/cross-references.html).
+
+-   This table is generated using the [`flextable` package](https://davidgohel.github.io/flextable/index.html).
+
+-   The `flextable` package is especially useful when outputting a Quarto or R Markdown document to Word format.
+
+```{r}
+#| label: tbl-varsummarystats
+#| tbl-cap: "Variable summary statistics by diabetes status"
+
+diabetes %>%
+  pivot_longer(cols = -diabetes,
+               names_to = "measure", 
+               values_to = "value") %>%
+  group_by(diabetes, measure) %>%
+  summarise(min = min(value),
+            max = max(value),
+            mean = mean(value),
+            median = median(value),
+            pct25 = quantile(value, probs = 0.25),
+            pct75 = quantile(value, probs = 0.75)) %>%
+  # make all values character, rounded to a different number of decimal places
+  # depending on the inital value
+  mutate(across(.cols = min:pct75,
+                .fns = ~ case_when(
+                  .x < 1 & .x != 0 ~ sprintf("%0.3f", .x),
+                  .x == 0 | .x %% 1 == 0 ~ sprintf("%0.0f", .x),
+                  TRUE ~ sprintf("%0.1f", .x))),
+         range = paste0(min, " - ", max),
+         median_iqr = paste0(median, " (", pct25, " - ", pct75, ")")) %>%
+  select(diabetes, measure, range, mean, median_iqr) %>% 
+  pivot_wider(id_cols = measure,
+              names_from = diabetes,
+              names_sep = "_",
+              values_from = range:median_iqr) %>% 
+  select(measure, contains("_0"), contains("_1")) %>%
+  flextable() %>%
+  add_header_row(
+    top = T,
+    values = c("", 
+               "Negative for diabetes", "", "",
+               "Positive for diabetes", "", "")) %>%
+  set_header_labels(
+    measure = "Variable name",
+    range_0 = "Range (minimum - maximum)",
+    mean_0 = "Mean",
+    median_iqr_0 = "Median (25th percentile - 75th percentile)",
+    range_1 = "Range (minimum - maximum)",
+    mean_1 = "Mean",
+    median_iqr_1 = "Median (25th percentile - 75th percentile)"
+  ) %>%
+  merge_at(i = 1, j = 2:4, part = "header") %>%
+  merge_at(i = 1, j = 5:7, part = "header") %>%
+  bold(part = "header") %>%
+  autofit()
+
+```
+
+### Example table 2
+
+-   This table is generated using the `tbl_regression()` function from the [`gtsummary` package](https://www.danieldsjoberg.com/gtsummary/index.html).
+
+-   To modify `gtsummary` table output, you can also use functions from the `gt` package after converting the table to a `gt` object using `as_gt()`.
+
+-   We also recommend the [`gt` package](https://gt.rstudio.com/index.html) on its own as one of the best packages for table generation and formatting.
+
+```{r}
+#| label: tbl-regoutput
+#| tbl-cap: Summary of regression output for the model predicting diabetes status using all available diagnostic measurements
+
+model_fit %>%
+  tbl_regression(exponentiate = T) %>%
+  as_gt() %>%
+  tab_options(
+    table.width = pct(80)
+  )
+
+```
+
+## References
+
+-   For more information on using citations, see [here](https://quarto.org/docs/authoring/footnotes-and-citations.html).
+
+-   For information on Zotero integration with the RStudio visual editor, see [here](https://rstudio.github.io/visual-markdown-editing/citations.html#citations-from-zotero).
+
+::: {#refs}
+:::
