@@ -45,6 +45,7 @@ library(tidyverse)
 library(gt)
 library(gtsummary)
 library(flextable)
+library(broom.helpers)
 
 # Load the data and give it a shorter object name
 data("PimaIndiansDiabetes2")
@@ -57,7 +58,7 @@ rm(PimaIndiansDiabetes2)
 The example data set contains the variables described in @tbl-vardescriptions below. This markdown table was created using the Table -\> Insert Table... button on the [RStudio visual editor](https://posit.co/blog/exploring-rstudio-visual-markdown-editor/) toolbar. This is a decent option for smaller tables that do not contain lots of embedded code, but table formatting options are limited.
 
 | Variable name | Description                                                                                |
-|--------------------------|----------------------------------------------|
+|---------------|--------------------------------------------------------------------------------------------|
 | diabetes      | patient positive or negative for diabetes                                                  |
 | pregnant      | number of pregnancies                                                                      |
 | glucose       | plasma glucose concentration                                                               |
@@ -112,7 +113,7 @@ $$
 
 where $Y$ is the outcome (diabetes status), and $X_1$ through $X_8$ are the set of covariates (diagnostic measurements).
 
-Use LaTeX syntax for mathematical operators, Greek letters, etc. Here are some resources for using math expressions in Quarto and R Markdown: 
+Use LaTeX syntax for mathematical operators, Greek letters, etc. Here are some resources for using math expressions in Quarto and R Markdown:
 
 -   [Math expressions in R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/markdown-syntax.html#math-expressions)
 -   [List of LaTeX mathematical symbols](https://oeis.org/wiki/List_of_LaTeX_mathematical_symbols)
@@ -163,13 +164,13 @@ diabetes %>%
   pivot_longer(cols = -diabetes,
                names_to = "measure", 
                values_to = "value") %>%
-  group_by(diabetes, measure) %>%
   summarise(min = min(value),
             max = max(value),
             mean = mean(value),
             median = median(value),
             pct25 = quantile(value, probs = 0.25),
-            pct75 = quantile(value, probs = 0.75)) %>%
+            pct75 = quantile(value, probs = 0.75),
+            .by = c(diabetes, measure)) %>%
   # make all values character, rounded to a different number of decimal places
   # depending on the inital value
   mutate(across(.cols = min:pct75,

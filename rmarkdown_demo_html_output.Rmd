@@ -35,6 +35,7 @@ library(tidyverse)
 library(gt)
 library(gtsummary)
 library(flextable)
+library(broom.helpers)
 
 # Load the data and give it a shorter object name
 data("PimaIndiansDiabetes2")
@@ -141,13 +142,13 @@ diabetes %>%
   pivot_longer(cols = -diabetes,
                names_to = "measure", 
                values_to = "value") %>%
-  group_by(diabetes, measure) %>%
   summarise(min = min(value),
             max = max(value),
             mean = mean(value),
             median = median(value),
             pct25 = quantile(value, probs = 0.25),
-            pct75 = quantile(value, probs = 0.75)) %>%
+            pct75 = quantile(value, probs = 0.75),
+            .by = c(diabetes, measure)) %>%
   # make all values character, rounded to a different number of decimal places
   # depending on the inital value
   mutate(across(.cols = min:pct75,

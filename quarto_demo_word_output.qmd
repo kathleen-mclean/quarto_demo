@@ -44,13 +44,13 @@ library(tidyverse)
 library(gt)
 library(gtsummary)
 library(flextable)
-library(officer)
-library(officedown)
+library(broom.helpers)
 
 # Load the data and give it a shorter object name
 data("PimaIndiansDiabetes2")
 diabetes_in <- PimaIndiansDiabetes2
 rm(PimaIndiansDiabetes2)
+
 ```
 
 ## Basic markdown table example
@@ -123,7 +123,7 @@ Use LaTeX syntax for mathematical operators, Greek letters, etc. Here are some r
 
 ## Results
 
-There are `r nrow(diabetes_in)` patients included in the original data set. After removing patients with any missing diagnostic measurements, there are `r nrow(diabetes)` patients included in the analysis. Of these patients, `r diabetes %>% filter(diabetes == 1) %>% nrow()` (`r sprintf("%0.1f", (diabetes %>% filter(diabetes == 1) %>% nrow())/(diabetes %>% nrow())*100)`%) were positive for diabetes, and `r diabetes %>% filter(diabetes == 0) %>% nrow()` (`r sprintf("%0.1f", (diabetes %>% filter(diabetes == 0) %>% nrow())/(diabetes %>% nrow())*100)`%) were negative for diabetes. Of all of the diagnostic measurements, the shape of the distribution of plasma glucose concentrations is the most different for patients who are positive for diabetes compared with patients who are negative (@fig-vardistributions). See `r run_reference(id = "tbl-varsummarystats")` for summary statistics of each variable, and `r run_reference(id = "tbl-regoutput")` for a summary of the logistic regression model output.
+There are `r nrow(diabetes_in)` patients included in the original data set. After removing patients with any missing diagnostic measurements, there are `r nrow(diabetes)` patients included in the analysis. Of these patients, `r diabetes %>% filter(diabetes == 1) %>% nrow()` (`r sprintf("%0.1f", (diabetes %>% filter(diabetes == 1) %>% nrow())/(diabetes %>% nrow())*100)`%) were positive for diabetes, and `r diabetes %>% filter(diabetes == 0) %>% nrow()` (`r sprintf("%0.1f", (diabetes %>% filter(diabetes == 0) %>% nrow())/(diabetes %>% nrow())*100)`%) were negative for diabetes. Of all of the diagnostic measurements, the shape of the distribution of plasma glucose concentrations is the most different for patients who are positive for diabetes compared with patients who are negative (@fig-vardistributions). See @tbl-varsummarystats for summary statistics of each variable, and @tbl-regoutput for a summary of the logistic regression model output.
 
 ### Example figure
 
@@ -167,13 +167,13 @@ diabetes %>%
   pivot_longer(cols = -diabetes,
                names_to = "measure", 
                values_to = "value") %>%
-  group_by(diabetes, measure) %>%
   summarise(min = min(value),
             max = max(value),
             mean = mean(value),
             median = median(value),
             pct25 = quantile(value, probs = 0.25),
-            pct75 = quantile(value, probs = 0.75)) %>%
+            pct75 = quantile(value, probs = 0.75),
+            .by = c(diabetes, measure)) %>%
   # make all values character, rounded to a different number of decimal places
   # depending on the inital value
   mutate(across(.cols = min:pct75,
@@ -207,9 +207,7 @@ diabetes %>%
   merge_at(i = 1, j = 2:4, part = "header") %>%
   merge_at(i = 1, j = 5:7, part = "header") %>%
   bold(part = "header") %>%
-  # use this instead of autofit() for word output
-  set_table_properties(layout = "autofit") %>%
-  set_caption(caption = "Variable summary statistics by diabetes status")
+  width(width = c(0.79, 1, 0.56, 1.05, 1, 0.56, 1.05)) 
 
 ```
 
@@ -219,7 +217,7 @@ diabetes %>%
 
 -   To use `gtsummary` table output when outputting to Word format, you can convert to a `flextable` object using the `as_flex_table()` function.
 
--   We also recommend the [`gt` package](https://gt.rstudio.com/index.html) on its own as one of the best packages for table generation and formatting, but it does not currently support Word format (I've heard will soon though!).
+-   We also recommend the [`gt` package](https://gt.rstudio.com/index.html) on its own as one of the best packages for table generation and formatting. `gt` now supports output to .docx, but it is currently having an issue outputting to MS Word format in Quarto (see [https://github.com/quarto-dev/quarto-cli/issues/7151](https://github.com/quarto-dev/quarto-cli/issues/7151)).
 
 ```{r}
 #| label: tbl-regoutput
@@ -228,14 +226,9 @@ diabetes %>%
 model_fit %>%
   tbl_regression(exponentiate = T) %>%
   as_flex_table() %>%
-  bold(part = "header") %>%
-  set_caption(caption = "Summary of regression output for the model predicting diabetes status using all available diagnostic measurements")
+  bold(part = "header")
 
 ```
-
-::: callout-note
-Note that automatic table numbering and cross-references are not working perfectly when using `flextable` and Word format. I am using the `run_reference()` function from the `officer` package as a workaround for table cross-references in the meanwhile. This issue should be fixed in subsequent releases of Quarto and `flextable`.
-:::
 
 ## References
 
