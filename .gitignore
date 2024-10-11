@@ -4,4 +4,5 @@
 .Ruserdata
 *.html
 *.docx
+*.pdf
 quarto_demo_notes.txt
