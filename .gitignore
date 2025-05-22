@@ -3,6 +3,6 @@
 .RData
 .Ruserdata
 *.html
-*.docx
+quarto_demo_word_output.docx
 *.pdf
 quarto_demo_notes.txt
